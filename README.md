@@ -77,7 +77,16 @@ git clone https://github.com/yourusername/chat-with-data.git
 cd chat-with-data
 ```
 
-### 2. Backend Setup
+### 2. Automated Setup (Recommended)
+```bash
+# Run the setup script
+chmod +x setup.sh
+./setup.sh
+```
+
+### 3. Manual Setup (Alternative)
+
+**Backend Setup:**
 ```bash
 cd backend
 
@@ -101,7 +110,7 @@ cp .env.example .env
 python main.py
 ```
 
-### 3. Frontend Setup
+**Frontend Setup:**
 ```bash
 cd frontend
 
@@ -314,4 +323,4 @@ For support and questions:
 
 ---
 
-Built with ❤️ by Sulaiman Ahmed
+Built with ❤️ by [Your Name/Organization]
