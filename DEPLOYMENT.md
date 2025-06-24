@@ -4,13 +4,535 @@ This guide covers deploying the Chat with Data application to production environ
 
 ## 📋 Deployment Options
 
-1. **Docker Containers** (Recommended)
-2. **Azure Container Apps**
-3. **Azure App Service**
-4. **Traditional VPS/VM Deployment**
-5. **Kubernetes**
+1. **Azure Container Apps**
+2. **Azure App Service**
+3. **Traditional VPS/VM Deployment** (Recommended)
+4. **Cloud Server Manual Setup**
 
-## 🐳 Docker Deployment (Recommended)
+## ☁️ Azure Container Apps Deployment
+
+### 1. Azure Resources Setup
+
+#### Create Resource Group and Container Registry
+```bash
+# Variables
+RESOURCE_GROUP="chat-data-rg"
+LOCATION="eastus"
+ACR_NAME="chatdataacr"
+CONTAINER_APP_ENV="chat-data-env"
+
+# Create resource group
+az group create --name $RESOURCE_GROUP --location $LOCATION
+
+# Create Azure Container Registry
+az acr create --resource-group $RESOURCE_GROUP --name $ACR_NAME --sku Basic --admin-enabled true
+
+# Create Container Apps Environment
+az containerapp env create \
+  --name $CONTAINER_APP_ENV \
+  --resource-group $RESOURCE_GROUP \
+  --location $LOCATION
+```
+
+#### Build and Push Images
+```bash
+# Login to ACR
+az acr login --name $ACR_NAME
+
+# Build and push backend
+docker build -t $ACR_NAME.azurecr.io/chat-data-backend:latest ./backend
+docker push $ACR_NAME.azurecr.io/chat-data-backend:latest
+
+# Build and push frontend
+docker build -t $ACR_NAME.azurecr.io/chat-data-frontend:latest ./frontend
+docker push $ACR_NAME.azurecr.io/chat-data-frontend:latest
+```
+
+### 2. Container Apps Configuration
+
+#### Deploy Container Apps
+```bash
+# Deploy backend
+az containerapp create \
+  --name chat-data-backend \
+  --resource-group $RESOURCE_GROUP \
+  --environment $CONTAINER_APP_ENV \
+  --image $ACR_NAME.azurecr.io/chat-data-backend:latest \
+  --target-port 8000 \
+  --ingress external \
+  --registry-server $ACR_NAME.azurecr.io \
+  --registry-username $(az acr credential show -n $ACR_NAME --query username -o tsv) \
+  --registry-password $(az acr credential show -n $ACR_NAME --query passwords[0].value -o tsv) \
+  --secrets anthropic-api-key="your_api_key" \
+  --env-vars ANTHROPIC_API_KEY=secretref:anthropic-api-key
+
+# Deploy frontend
+az containerapp create \
+  --name chat-data-frontend \
+  --resource-group $RESOURCE_GROUP \
+  --environment $CONTAINER_APP_ENV \
+  --image $ACR_NAME.azurecr.io/chat-data-frontend:latest \
+  --target-port 3000 \
+  --ingress external \
+  --registry-server $ACR_NAME.azurecr.io \
+  --registry-username $(az acr credential show -n $ACR_NAME --query username -o tsv) \
+  --registry-password $(az acr credential show -n $ACR_NAME --query passwords[0].value -o tsv)
+```
+
+## 🏢 Azure App Service Deployment
+
+### 1. Create App Service Resources
+
+```bash
+# Create App Service Plan
+az appservice plan create \
+  --name chat-data-plan \
+  --resource-group $RESOURCE_GROUP \
+  --sku B2 \
+  --is-linux
+
+# Create Web Apps
+az webapp create \
+  --resource-group $RESOURCE_GROUP \
+  --plan chat-data-plan \
+  --name chat-data-backend-app \
+  --runtime "PYTHON|3.11"
+
+az webapp create \
+  --resource-group $RESOURCE_GROUP \
+  --plan chat-data-plan \
+  --name chat-data-frontend-app \
+  --runtime "NODE|18-lts"
+```
+
+### 2. Configure App Settings
+
+```bash
+# Backend configuration
+az webapp config appsettings set \
+  --resource-group $RESOURCE_GROUP \
+  --name chat-data-backend-app \
+  --settings \
+    ANTHROPIC_API_KEY="your_api_key" \
+    AZURE_TENANT_ID="your_tenant_id" \
+    AZURE_CLIENT_ID="your_client_id" \
+    AZURE_CLIENT_SECRET="your_client_secret"
+
+# Frontend configuration
+az webapp config appsettings set \
+  --resource-group $RESOURCE_GROUP \
+  --name chat-data-frontend-app \
+  --settings \
+    NEXT_PUBLIC_API_URL="https://chat-data-backend-app.azurewebsites.net"
+```
+
+## 🖥️ Traditional VPS/VM Deployment (Recommended)
+
+### 1. Server Setup
+
+#### Install Prerequisites on Ubuntu/Debian
+```bash
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install Python 3.11
+sudo apt install python3.11 python3.11-venv python3.11-dev python3-pip -y
+
+# Install Node.js 18
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Install PM2 for process management
+sudo npm install -g pm2
+
+# Install Nginx
+sudo apt install nginx -y
+
+# Install Certbot for SSL
+sudo apt install certbot python3-certbot-nginx -y
+```
+
+### 2. Application Deployment
+
+#### Deploy Backend
+```bash
+# Create application directory
+sudo mkdir -p /var/www/chat-data
+sudo chown $USER:$USER /var/www/chat-data
+
+# Clone repository
+cd /var/www/chat-data
+git clone https://github.com/yourusername/chat-with-data.git .
+
+# Setup backend
+cd backend
+python3.11 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+# Edit .env with production values
+
+# Test backend
+python main.py
+```
+
+#### Deploy Frontend
+```bash
+# Setup frontend
+cd /var/www/chat-data/frontend
+npm install
+npm run build
+
+# Test frontend
+npm start
+```
+
+### 3. Process Management with PM2
+
+#### PM2 Configuration Files
+
+**Backend PM2 Config: `backend/ecosystem.config.js`**
+```javascript
+module.exports = {
+  apps: [{
+    name: 'chat-data-backend',
+    script: '/var/www/chat-data/backend/venv/bin/python',
+    args: 'main.py',
+    cwd: '/var/www/chat-data/backend',
+    instances: 2,
+    exec_mode: 'cluster',
+    env: {
+      PORT: 8000,
+      NODE_ENV: 'production'
+    },
+    error_file: '/var/log/pm2/chat-data-backend-error.log',
+    out_file: '/var/log/pm2/chat-data-backend-out.log',
+    log_file: '/var/log/pm2/chat-data-backend.log',
+    time: true
+  }]
+}
+```
+
+**Frontend PM2 Config: `frontend/ecosystem.config.js`**
+```javascript
+module.exports = {
+  apps: [{
+    name: 'chat-data-frontend',
+    script: 'npm',
+    args: 'start',
+    cwd: '/var/www/chat-data/frontend',
+    instances: 1,
+    env: {
+      PORT: 3000,
+      NODE_ENV: 'production'
+    },
+    error_file: '/var/log/pm2/chat-data-frontend-error.log',
+    out_file: '/var/log/pm2/chat-data-frontend-out.log',
+    log_file: '/var/log/pm2/chat-data-frontend.log',
+    time: true
+  }]
+}
+```
+
+#### Start Applications with PM2
+```bash
+# Create log directory
+sudo mkdir -p /var/log/pm2
+sudo chown $USER:$USER /var/log/pm2
+
+# Start backend
+cd /var/www/chat-data/backend
+pm2 start ecosystem.config.js
+
+# Start frontend
+cd /var/www/chat-data/frontend
+pm2 start ecosystem.config.js
+
+# Save PM2 configuration
+pm2 save
+
+# Setup PM2 startup script
+pm2 startup
+sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u $USER --hp $HOME
+```
+
+### 4. Nginx Configuration
+
+#### Production Nginx Config
+```nginx
+# /etc/nginx/sites-available/chat-data
+server {
+    listen 80;
+    server_name yourdomain.com www.yourdomain.com;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name yourdomain.com www.yourdomain.com;
+
+    ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
+
+    # SSL Configuration
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+
+    # Security Headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "no-referrer-when-downgrade" always;
+
+    # Frontend
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Backend API
+    location /api {
+        proxy_pass http://localhost:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Health checks
+    location /health {
+        proxy_pass http://localhost:8000;
+    }
+
+    # API Documentation
+    location /docs {
+        proxy_pass http://localhost:8000;
+    }
+}
+```
+
+#### Enable Nginx Site
+```bash
+# Enable site
+sudo ln -s /etc/nginx/sites-available/chat-data /etc/nginx/sites-enabled/
+
+# Test configuration
+sudo nginx -t
+
+# Restart Nginx
+sudo systemctl restart nginx
+```
+
+### 5. SSL Certificate Setup
+
+```bash
+# Obtain SSL certificate
+sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
+
+# Setup auto-renewal
+sudo crontab -e
+# Add: 0 12 * * * /usr/bin/certbot renew --quiet
+```
+
+## 🔧 Production Configuration
+
+### 1. Environment Variables
+
+#### Backend Production Variables
+```bash
+# Core Configuration
+ANTHROPIC_API_KEY=your_production_api_key
+AZURE_TENANT_ID=your_tenant_id
+AZURE_CLIENT_ID=your_client_id
+AZURE_CLIENT_SECRET=your_client_secret
+
+# Performance Settings
+UVICORN_WORKERS=4
+CACHE_TTL=7200
+MAX_QUERY_ROWS=1000
+QUERY_TIMEOUT=30
+
+# Security Settings
+SECRET_KEY=your_256_bit_secret_key
+CORS_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+
+# Monitoring
+LOG_LEVEL=INFO
+ENABLE_METRICS=true
+```
+
+#### Frontend Production Variables
+```bash
+# API Configuration
+NEXT_PUBLIC_API_URL=https://yourdomain.com
+
+# Performance
+NEXT_PUBLIC_CACHE_TTL=3600
+```
+
+## 🚨 Backup and Disaster Recovery
+
+### 1. Backup Script
+
+```bash
+#!/bin/bash
+# backup.sh - Automated backup script
+
+BACKUP_DIR="/backups"
+DATE=$(date +%Y%m%d_%H%M%S)
+APP_DIR="/var/www/chat-data"
+
+# Create backup directory
+mkdir -p $BACKUP_DIR
+
+# Backup application files
+tar -czf $BACKUP_DIR/app_backup_$DATE.tar.gz -C /var/www chat-data
+
+# Backup Nginx configuration
+tar -czf $BACKUP_DIR/nginx_backup_$DATE.tar.gz /etc/nginx/sites-available/chat-data
+
+# Backup environment files
+cp $APP_DIR/backend/.env $BACKUP_DIR/backend_env_$DATE
+cp $APP_DIR/frontend/.env.local $BACKUP_DIR/frontend_env_$DATE
+
+# Backup PM2 configuration
+pm2 save
+cp ~/.pm2/dump.pm2 $BACKUP_DIR/pm2_dump_$DATE.pm2
+
+# Upload to cloud storage (optional)
+# aws s3 cp $BACKUP_DIR/ s3://your-backup-bucket/chat-data/ --recursive
+
+# Cleanup old backups (keep last 30 days)
+find $BACKUP_DIR -name "*.tar.gz" -mtime +30 -delete
+find $BACKUP_DIR -name "*_env_*" -mtime +30 -delete
+```
+
+### 2. Update and Deployment Script
+
+```bash
+#!/bin/bash
+# deploy.sh - Production deployment script
+
+echo "🚀 Starting production deployment..."
+
+APP_DIR="/var/www/chat-data"
+cd $APP_DIR
+
+# Pull latest changes
+git pull origin main
+
+# Update backend
+cd backend
+source venv/bin/activate
+pip install -r requirements.txt
+cd ..
+
+# Update frontend
+cd frontend
+npm install
+npm run build
+cd ..
+
+# Restart applications
+pm2 restart all
+
+# Reload Nginx
+sudo nginx -s reload
+
+echo "✅ Deployment completed successfully!"
+```
+
+## 📊 Monitoring and Logging
+
+### 1. Log Management
+
+#### Logrotate Configuration
+```bash
+# /etc/logrotate.d/chat-data
+/var/log/pm2/*.log {
+    daily
+    missingok
+    rotate 52
+    compress
+    notifempty
+    create 644 $USER $USER
+    postrotate
+        pm2 reloadLogs
+    endscript
+}
+```
+
+### 2. Health Monitoring
+
+#### Simple Health Check Script
+```bash
+#!/bin/bash
+# health-check.sh
+
+# Check backend
+if ! curl -f http://localhost:8000/health > /dev/null 2>&1; then
+    echo "Backend is down, restarting..."
+    pm2 restart chat-data-backend
+fi
+
+# Check frontend
+if ! curl -f http://localhost:3000 > /dev/null 2>&1; then
+    echo "Frontend is down, restarting..."
+    pm2 restart chat-data-frontend
+fi
+```
+
+#### Add to Crontab
+```bash
+# Add to crontab
+*/5 * * * * /path/to/health-check.sh
+```
+
+## 🎯 Final Deployment Checklist
+
+### Pre-Deployment
+- [ ] Server configured with Python 3.11 and Node.js 18
+- [ ] All environment variables configured
+- [ ] SSL certificates installed and validated
+- [ ] Database connections tested
+- [ ] AI service API keys validated
+- [ ] PM2 process management configured
+- [ ] Nginx reverse proxy configured
+- [ ] Firewall rules configured
+
+### Deployment
+- [ ] Application code deployed
+- [ ] Dependencies installed
+- [ ] PM2 processes started
+- [ ] Nginx configuration activated
+- [ ] SSL certificates configured
+- [ ] Backup procedures implemented
+- [ ] Monitoring scripts configured
+
+### Post-Deployment
+- [ ] Verify application functionality
+- [ ] Test authentication flows
+- [ ] Validate data source connections
+- [ ] Monitor performance metrics
+- [ ] Test backup and recovery procedures
+- [ ] Configure automated health checks
+- [ ] Document maintenance procedures
+
+---
+
+🎉 **Congratulations!** Your Chat with Data application is now deployed to production with enterprise-grade reliability and performance.
 
 ### Prerequisites
 - Docker and Docker Compose installed
