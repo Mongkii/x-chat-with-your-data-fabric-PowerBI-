@@ -2,7 +2,7 @@
 
 An intelligent AI-powered application that lets you chat with your Microsoft Fabric databases and Power BI semantic models using natural language. Built with FastAPI (Python backend) and Next.js (React frontend).
 
-![Chat with Data Demo](https://via.placeholder.com/800x400?text=Chat+with+Data+Demo+Screenshot)
+![Chat with Data Demo](Chat With Your Data.png)
 
 ## 🚀 What This App Does
 
