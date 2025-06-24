@@ -248,7 +248,70 @@ npm run dev
 3. **Copy Secret Value**
    - **Important**: Copy the secret value immediately (it won't be shown again)
 
-### 4.4 Update Backend Environment
+### 4.4 Add App to Workspaces
+
+**Critical Step**: Your Azure app must be added to both Microsoft Fabric and Power BI workspaces with appropriate permissions.
+
+#### Microsoft Fabric Workspace Access
+
+1. **Navigate to Fabric Workspace**
+   - Go to [fabric.microsoft.com](https://fabric.microsoft.com)
+   - Open your target workspace (where your Lakehouse/Warehouse is located)
+
+2. **Add Service Principal**
+   - Click on "Workspace settings" (gear icon)
+   - Go to "Access" tab
+   - Click "Add people or groups"
+   - In the search box, enter your **Application (client) ID**
+   - Select your application from the dropdown
+   - Choose role: **Member** or **Admin**
+     - **Member**: Can read and query data (recommended for most use cases)
+     - **Admin**: Full workspace access (use only if needed)
+   - Click "Add"
+
+#### Power BI Workspace Access
+
+1. **Navigate to Power BI Service**
+   - Go to [powerbi.microsoft.com](https://powerbi.microsoft.com)
+   - Open your Power BI Premium workspace
+
+2. **Add Service Principal**
+   - Click on "Workspace settings" (three dots menu → Settings)
+   - Go to "Access" tab
+   - Click "Add people or groups"
+   - Enter your **Application (client) ID** in the search box
+   - Select your application
+   - Choose role: **Member** or **Admin**
+     - **Member**: Can access datasets and semantic models (recommended)
+     - **Admin**: Full workspace management (use only if needed)
+   - Click "Add"
+
+3. **Enable Service Principal Access** (If Required)
+   - Go to Power BI Admin Portal
+   - Navigate to "Tenant settings"
+   - Find "Developer settings" → "Service principals can use Power BI APIs"
+   - Enable this setting for your organization or specific security groups
+   - Apply changes
+
+#### Verify Workspace Access
+
+**Test Fabric Access:**
+```bash
+# Use Azure CLI to test access
+az rest --method GET \
+  --url "https://api.fabric.microsoft.com/v1/workspaces" \
+  --headers "Authorization=Bearer $(az account get-access-token --resource https://api.fabric.microsoft.com --query accessToken -o tsv)"
+```
+
+**Test Power BI Access:**
+```bash
+# Test Power BI API access
+az rest --method GET \
+  --url "https://api.powerbi.com/v1.0/myorg/groups" \
+  --headers "Authorization=Bearer $(az account get-access-token --resource https://analysis.windows.net/powerbi/api --query accessToken -o tsv)"
+```
+
+### 4.5 Update Backend Environment
 
 Update your backend `.env` file with the Azure details:
 
