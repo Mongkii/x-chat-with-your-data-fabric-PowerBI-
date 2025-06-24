@@ -2,72 +2,299 @@
 
 An intelligent AI-powered application that lets you chat with your Microsoft Fabric databases and Power BI semantic models using natural language. Built with FastAPI (Python backend) and Next.js (React frontend).
 
-## 🚀 Features
+![Chat with Data Demo](https://via.placeholder.com/800x400?text=Chat+with+Data+Demo+Screenshot)
 
-### Core Capabilities
-- **Natural Language Queries**: Ask questions in plain English
-- **Dual Data Source Support**: Works with both Microsoft Fabric (T-SQL) and Power BI (DAX)
-- **AI-Powered Query Generation**: Automatically generates optimized SQL/DAX queries
-- **Self-Correcting AI**: Automatically fixes query errors and retries
-- **Interactive Chat Interface**: Real-time conversation with your data
-- **Data Visualization**: Auto-generates charts and graphs
-- **Schema Explorer**: Browse your database/model structure
+## 🚀 What This App Does
 
-### AI Intelligence
-- **Context-Aware**: Remembers conversation history for follow-up questions
-- **Smart Query Optimization**: Generates efficient queries with proper limits and joins
-- **Error Recovery**: Analyzes errors and automatically corrects queries
-- **Business Logic Understanding**: Interprets business terminology and relationships
+- **Ask Questions in Plain English**: "Show me top 10 customers by revenue" or "What are sales trends this month?"
+- **AI Generates SQL/DAX**: Automatically creates optimized queries for your data
+- **Self-Correcting**: If a query fails, AI analyzes the error and fixes it automatically
+- **Real-Time Insights**: Get instant answers with beautiful charts and tables
+- **Two Data Sources**: Works with Microsoft Fabric (SQL) and Power BI (DAX)
 
-### Technical Features
-- **OAuth2 Authentication**: Secure authentication with Azure/Microsoft
-- **Performance Optimized**: Caching, connection pooling, and smart query limits
-- **Real-time Feedback**: Shows AI thinking process and query attempts
-- **Export Capabilities**: Download results as CSV/Excel
-- **Responsive Design**: Works on desktop and mobile
+## 🎯 Quick Demo
 
-## 🏗️ Architecture
+1. **Connect** to your Microsoft Fabric or Power BI
+2. **Ask** "What tables do I have?"
+3. **Watch** the AI generate and execute queries
+4. **Get** instant results with visualizations
 
+## 📋 What You Need Before Starting
+
+### Required Software
+- **Python 3.8 or higher** ([Download here](https://python.org))
+- **Node.js 18 or higher** ([Download here](https://nodejs.org))
+- **Git** ([Download here](https://git-scm.com))
+
+### Required Accounts & Services
+- **Azure account** with admin permissions
+- **Microsoft Fabric workspace** (for SQL data) OR **Power BI Premium workspace** (for semantic models)
+- **Anthropic Claude API key** ([Get one here](https://console.anthropic.com))
+
+## 🚀 Easy Setup (5 Minutes)
+
+### Step 1: Download the Code
+```bash
+git clone https://github.com/yourusername/chat-with-data.git
+cd chat-with-data
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Frontend      │    │     Backend      │    │  Data Sources   │
-│   (Next.js)     │◄──►│   (FastAPI)      │◄──►│                 │
-│                 │    │                  │    │ • Microsoft     │
-│ • Chat UI       │    │ • AI Agents      │    │   Fabric        │
-│ • Visualizations│    │ • Query Engine   │    │ • Power BI      │
-│ • Schema Explorer│    │ • Auth Service   │    │   Semantic      │
-└─────────────────┘    └──────────────────┘    │   Models        │
-                                                └─────────────────┘
+
+### Step 2: Run the Setup Script
+```bash
+# Make the script executable (Mac/Linux)
+chmod +x setup.sh
+
+# Run the automated setup
+./setup.sh
 ```
 
-### Backend Architecture
-- **Enhanced Multi-Agent Service**: Core AI orchestration
-- **Fabric Service**: Microsoft Fabric database connections
-- **Semantic Model Service**: Power BI semantic model connections
-- **Claude Service**: AI query generation and analysis
-- **Auth Service**: OAuth2 authentication management
+**Windows users:** Run these commands instead:
+```cmd
+# Copy environment files
+copy backend\.env.example backend\.env
+copy frontend\.env.local.example frontend\.env.local
 
-### Frontend Architecture
-- **EnhancedChatInterface**: Main conversational UI
-- **Data Visualization**: Intelligent chart generation
-- **Schema Explorers**: Database/model structure browsing
-- **Connection Management**: Service configuration and testing
+# Setup backend
+cd backend
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+cd ..
 
-## 📋 Prerequisites
+# Setup frontend
+cd frontend
+npm install
+cd ..
+```
 
-### Software Requirements
-- **Python 3.8+**
-- **Node.js 18+**
-- **npm or yarn**
+## 🔑 Step 3: Get Your API Keys
 
-### Microsoft Requirements
-- **Azure Active Directory App Registration**
-- **Microsoft Fabric Workspace** (for SQL endpoint)
-- **Power BI Premium Workspace** (for XMLA endpoint)
-- **Appropriate licensing and permissions**
+### Get Claude AI API Key
+1. Go to [console.anthropic.com](https://console.anthropic.com)
+2. Sign up for an account
+3. Go to API Keys section
+4. Create a new API key
+5. Copy the key (starts with `sk-ant-api03-`)
 
-### AI Service
-- **Anthropic Claude API Key** (for AI capabilities)
+### Setup Azure App Registration
+1. Go to [portal.azure.com](https://portal.azure.com)
+2. Search for "App registrations" → Click "New registration"
+3. Fill in:
+   - **Name**: `Chat with Data App`
+   - **Account types**: `Single tenant`
+   - **Redirect URI**: `Web` → `http://localhost:3000`
+4. Click "Register"
+5. **Copy these 3 values**:
+   - **Application (client) ID**
+   - **Directory (tenant) ID**
+   - **Client Secret** (go to "Certificates & secrets" → "New client secret")
+
+### Add API Permissions
+1. In your app registration, go to "API permissions"
+2. Click "Add a permission"
+3. Add these permissions:
+   - **Power BI Service** → `Dataset.ReadWrite.All`, `Workspace.Read.All`
+   - **Azure SQL Database** → `user_impersonation`
+4. Click "Grant admin consent"
+
+## ⚙️ Step 4: Configure Environment
+
+### Edit Backend Configuration
+Open `backend/.env` in any text editor and fill in:
+```env
+# Your Claude AI API key
+ANTHROPIC_API_KEY=sk-ant-api03-your-api-key-here
+
+# Your Azure app registration details
+AZURE_TENANT_ID=your-tenant-id-here
+AZURE_CLIENT_ID=your-client-id-here
+AZURE_CLIENT_SECRET=your-client-secret-here
+
+# Leave these as they are
+LOG_LEVEL=INFO
+CORS_ORIGINS=http://localhost:3000
+```
+
+### Edit Frontend Configuration
+The `frontend/.env.local` file should already be correct:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+## 🏢 Step 5: Add App to Your Workspaces
+
+### For Microsoft Fabric
+1. Go to [fabric.microsoft.com](https://fabric.microsoft.com)
+2. Open your workspace
+3. Click "Workspace settings" (gear icon)
+4. Go to "Access" → "Add people or groups"
+5. Enter your **Application (client) ID**
+6. Select **Member** role
+7. Click "Add"
+
+### For Power BI
+1. Go to [powerbi.microsoft.com](https://powerbi.microsoft.com)
+2. Open your Premium workspace
+3. Click workspace menu (three dots) → "Settings"
+4. Go to "Access" → "Add people or groups"
+5. Enter your **Application (client) ID**
+6. Select **Member** role
+7. Click "Add"
+
+## 🎉 Step 6: Start the Application
+
+### Open Two Terminal Windows
+
+**Terminal 1 - Start Backend:**
+```bash
+cd backend
+
+# Activate virtual environment
+# Windows:
+venv\Scripts\activate
+# Mac/Linux:
+source venv/bin/activate
+
+# Start backend server
+python main.py
+```
+You should see: `✅ Chat with Data API ready to accept requests`
+
+**Terminal 2 - Start Frontend:**
+```bash
+cd frontend
+
+# Start frontend
+npm run dev
+```
+You should see: `▲ Next.js ready on http://localhost:3000`
+
+## 🌐 Step 7: Test the Application
+
+1. **Open your browser** and go to `http://localhost:3000`
+
+2. **Configure Authentication**:
+   - You'll see the main page
+   - The authentication should show as "✅ Configured" (if not, click "Configure OAuth2" and enter your Azure details)
+
+3. **Connect to Your Data**:
+   - Choose either "SQL Endpoint" (for Fabric) or "Power BI Semantic Model"
+   - For **Fabric**: Enter your workspace SQL endpoint URL and database name
+   - For **Power BI**: Enter your XMLA endpoint URL and dataset name
+   - Click "Test Connection" - you should see "✅ Connected successfully"
+
+4. **Start Chatting**:
+   - Try asking: "What tables are available?"
+   - Try asking: "Show me 5 rows from the largest table"
+   - Watch the AI generate queries and return results!
+
+## 💡 Example Questions to Try
+
+### For Microsoft Fabric (SQL):
+- "What tables do I have in this database?"
+- "Show me the top 10 customers by revenue"
+- "What are the sales trends by month this year?"
+- "How many orders were placed last week?"
+
+### For Power BI (DAX):
+- "What measures are available in this model?"
+- "Show me sales by product category"
+- "Compare this year's revenue to last year"
+- "What's the total revenue for each region?"
+
+## 🔍 Troubleshooting
+
+### Backend Won't Start
+- **Error**: `ModuleNotFoundError`
+  - **Fix**: Make sure virtual environment is activated and run `pip install -r requirements.txt`
+
+- **Error**: `Claude is not available`
+  - **Fix**: Check your `ANTHROPIC_API_KEY` in `backend/.env`
+
+### Frontend Won't Start
+- **Error**: `Cannot find module`
+  - **Fix**: Run `npm install` in the frontend directory
+
+### Authentication Issues
+- **Error**: "Authentication not configured"
+  - **Fix**: Check your Azure credentials in `backend/.env`
+  - **Fix**: Make sure you've added the app to your workspaces
+
+### Connection Issues
+- **Error**: "Connection failed"
+  - **Fix**: Verify your workspace URLs are correct
+  - **Fix**: Make sure the app has Member permissions in the workspace
+  - **Fix**: Check if your workspace is Premium (required for Power BI XMLA)
+
+## 📱 Application Features
+
+### Chat Interface
+- Real-time conversation with your data
+- Shows AI thinking process
+- Displays query attempts and corrections
+- Conversation history for follow-up questions
+
+### Data Visualization
+- Auto-generated charts based on your questions
+- Interactive data tables
+- Export capabilities for results
+
+### Schema Explorer
+- Browse your database/model structure
+- View table relationships
+- Explore available measures and columns
+
+## 🛠️ Advanced Configuration
+
+### Performance Settings
+Edit `backend/.env` to adjust:
+```env
+MAX_QUERY_ROWS=1000        # Maximum rows returned
+QUERY_TIMEOUT=30          # Query timeout in seconds
+CACHE_TTL=3600           # Cache duration in seconds
+```
+
+### Security Settings
+For production deployment, generate a strong secret key:
+```env
+SECRET_KEY=your-very-strong-secret-key-here
+```
+
+## 📚 Additional Resources
+
+- **API Documentation**: Visit `http://localhost:8000/docs` when backend is running
+- **Detailed Setup Guide**: See [INSTALLATION.md](INSTALLATION.md)
+- **Architecture Overview**: See [ARCHITECTURE.md](ARCHITECTURE.md)
+- **Deployment Guide**: See [DEPLOYMENT.md](DEPLOYMENT.md)
+
+## 🤝 Getting Help
+
+If you encounter issues:
+
+1. **Check the troubleshooting section above**
+2. **Review the logs** in your terminal windows
+3. **Verify your configuration** files have the correct values
+4. **Test your Azure app permissions** in the Azure portal
+5. **Open an issue** on GitHub with error details
+
+## 🎯 What's Next?
+
+Once you have the basic setup working:
+
+1. **Explore Advanced Features**: Try complex queries and follow-up questions
+2. **Connect Multiple Data Sources**: Set up both Fabric and Power BI connections
+3. **Customize the Interface**: Modify the React components to fit your needs
+4. **Deploy to Production**: Follow the deployment guide for cloud hosting
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+**Built with ❤️ using Anthropic Claude, Microsoft Fabric, Power BI, FastAPI, and Next.js**
+
+**⭐ If this project helps you, please give it a star on GitHub!**
 
 ## 🚀 Quick Start
 
@@ -323,4 +550,4 @@ For support and questions:
 
 ---
 
-Built with ❤️ by [Your Name/Organization]
+Built with ❤️ by Sulaiman Ahmed
