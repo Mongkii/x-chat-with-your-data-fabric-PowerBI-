@@ -4,6 +4,8 @@ An intelligent AI-powered application that lets you chat with your Microsoft Fab
 
 ![[Chat with Data Demo](Chat With Your Data.png)](https://github.com/sulaiman013/chat-with-your-data-fabric-PowerBI-/blob/1311777a7b34b0b54d7e1fd295505b19223572c5/Chat%20With%20Your%20Data.png)
 
+Check the video demonstration: https://youtu.be/ShrYnqdaGuc?si=SdCXLfUNGeo5Vnb_
+
 ## 🚀 What This App Does
 
 - **Ask Questions in Plain English**: "Show me top 10 customers by revenue" or "What are sales trends this month?"
